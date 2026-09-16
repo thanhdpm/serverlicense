@@ -13,7 +13,7 @@ return new class extends Migration {
     public function up()
     {
         Schema::create('licenses', function (Blueprint $table) {
-            $table->bigIncrements('id')->unique('id');
+            $table->bigIncrements('id');
             $table->json('customer')->nullable();
             $table->json('product')->nullable();
             $table->bigInteger('product_id')->nullable();

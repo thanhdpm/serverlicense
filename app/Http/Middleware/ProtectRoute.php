@@ -17,7 +17,7 @@ class ProtectRoute
     public function handle(Request $request, Closure $next)
     {
 
-        if (env('APP_DEMO') === false) {
+        if (!config('app.demo', env('APP_DEMO', false))) {
             return $next($request);
         } else {
             return response('Bạn không thể thao tác trên trang DEMO');

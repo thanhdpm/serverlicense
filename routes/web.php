@@ -52,7 +52,7 @@ Route::middleware(['app'])->group(function () {
                 Route::get('add', 'viewAdd')->name('add');
                 Route::post('add', 'doAdd')
                     ->middleware('protect')
-                    ->name('add');
+                    ->name('do_add');
             });
 
             Route::group(['prefix' => 'customer'], function () {

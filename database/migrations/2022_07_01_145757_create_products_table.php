@@ -13,7 +13,7 @@ return new class extends Migration {
     public function up()
     {
         Schema::create('products', function (Blueprint $table) {
-            $table->bigIncrements('id')->unique('id');
+            $table->bigIncrements('id');
             $table->text('name')->nullable();
             $table->longText('description')->nullable();
             $table->timestamp('created_at')->nullable()->useCurrent();

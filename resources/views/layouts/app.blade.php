@@ -208,7 +208,7 @@
                                 <a href="{{ route('customer.index') }}" class="waves-effect">
                                     <i class="ri-team-line"></i>
                                     <span class="badge rounded-pill bg-danger float-end">
-                                        {{ number_format(count(App\Models\Customer::all())) }}
+                                        {{ number_format(\App\Models\Customer::count()) }}
                                     </span>
                                     <span>Khách hàng</span>
                                 </a>

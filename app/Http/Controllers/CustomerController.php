@@ -15,7 +15,7 @@ class CustomerController extends Controller
         'fullname' => 'required',
         'gender' => 'required|in:male,female,unknown',
         'dob' => 'nullable|date',
-        'phone' => 'nullable|integer',
+        'phone' => 'nullable|numeric',
         'email' => 'nullable|email',
         'note' => 'nullable|string',
     ];
@@ -51,7 +51,7 @@ class CustomerController extends Controller
         $data = $validator->validated();
 
         Customer::create(array_merge($validator->validated(), [
-            'dob' => Carbon::parse(Arr::get($data, 'dob'))
+            'dob' => !empty(Arr::get($data, 'dob')) ? Carbon::parse(Arr::get($data, 'dob')) : null
         ]));
 
         return redirect()->route('customer.index')->with('success', 'Thêm khách hàng "' . $request->fullname . '" thành công!');
@@ -82,29 +82,23 @@ class CustomerController extends Controller
         }
     }
 
-    public function edit($id)
+    public function edit(Customer $customer)
     {
-        $customer = Customer::firstWhere('id', $id);
-
-        return $customer
-            ? view('customers.edit', compact('customer'))
-            : redirect()->route('customer.index')->withErrors([
-                "Không tìm thấy hồ sơ khách hàng :("
-            ]);
+        return view('customers.edit', compact('customer'));
     }
 
-    public function save(Request $request, Customer $customer, License $license)
+    public function save(Request $request, Customer $customer)
     {
         $validator = Validator::make($request->all(), $this->rules);
 
         if ($validator->fails()) {
-            return back()->withErrors($validator);
+            return back()->withInput()->withErrors($validator);
         }
 
         $data = $validator->validated();
 
         $customer->update(array_merge($validator->validated(), [
-            'dob' => Carbon::parse(Arr::get($data, 'dob'))
+            'dob' => !empty(Arr::get($data, 'dob')) ? Carbon::parse(Arr::get($data, 'dob')) : null
         ]));
 
         return redirect()->route('customer.index')->with('success', 'Lưu thông tin khách hàng "' . $request->fullname . '" thành công!');

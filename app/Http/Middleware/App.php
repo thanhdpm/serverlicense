@@ -22,8 +22,22 @@ class App
         });
         $request->merge($userInput);
 
-        if (empty(env('DB_DATABASE')) || empty(env('DB_USERNAME'))) {
-            return response(view('setup'));
+        if (app()->environment('testing')) {
+            return $next($request);
+        }
+
+        $defaultConn = config('database.default', 'mysql');
+        $dbDatabase = config("database.connections.{$defaultConn}.database") ?: env('DB_DATABASE');
+        $dbUsername = config("database.connections.{$defaultConn}.username") ?: env('DB_USERNAME');
+
+        if ($defaultConn === 'sqlite') {
+            if (empty($dbDatabase)) {
+                return response(view('setup'));
+            }
+        } else {
+            if (empty($dbDatabase) || empty($dbUsername)) {
+                return response(view('setup'));
+            }
         }
         
         return $next($request);

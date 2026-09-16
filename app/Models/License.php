@@ -17,5 +17,22 @@ class License extends Model
         'product_id',
         'key',
         'duration',
+        'fingerprint',
+        'activated_at',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'customer' => 'array',
+            'product' => 'array',
+            'fingerprint' => 'array',
+            'activated_at' => 'datetime',
+        ];
+    }
 }

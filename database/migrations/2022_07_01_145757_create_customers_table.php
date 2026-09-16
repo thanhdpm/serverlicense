@@ -13,7 +13,7 @@ return new class extends Migration {
     public function up()
     {
         Schema::create('customers', function (Blueprint $table) {
-            $table->bigIncrements('id')->unique('id');
+            $table->bigIncrements('id');
             $table->text('fullname')->nullable();
             $table->text('gender')->nullable();
             $table->date('dob')->nullable();

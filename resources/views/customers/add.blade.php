@@ -12,7 +12,7 @@
     <div class="col-lg-6" style="display: block; margin: 0 auto;">
         <div class="card">
             <div class="card-body">
-                <form action="{{ route('customer.add') }}" method="POST">
+                <form action="{{ route('customer.do_add') }}" method="POST">
                     @csrf
 
                     @include('common.alert')
