@@ -2,106 +2,68 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
-use App\Models\License;
+use App\Exports\CustomersExport;
+use App\Http\Requests\CustomerRequest;
 use App\Models\Customer;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\View\View;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class CustomerController extends Controller
 {
-    protected array $rules = [
-        'fullname' => 'required',
-        'gender' => 'required|in:male,female,unknown',
-        'dob' => 'nullable|date',
-        'phone' => 'nullable|numeric',
-        'email' => 'nullable|email',
-        'note' => 'nullable|string',
-    ];
-
-    public function index(Request $request)
+    public function index(Request $request): View
     {
-        $params = $request->all();
-
-        $customers = Customer::query()->orderByDesc('id');
-
-        search_by_cols($customers, $request->input('s'), [
-            'fullname', 'gender', 'dob', 'phone', 'email', 'note', 'id',
-        ]);
-
-        $customers = paginate_with_params($customers, $params);
+        $customers = Customer::query()
+            ->search($request->string('s')->toString())
+            ->latest('id')
+            ->paginate($this->perPage($request))
+            ->withQueryString();
 
         return view('customers.index', compact('customers'));
     }
 
-    public function viewAdd()
+    public function create(): View
     {
-        return view('customers.add');
+        return view('customers.create');
     }
 
-    public function doAdd(Request $request)
+    public function store(CustomerRequest $request): RedirectResponse
     {
-        $validator = Validator::make($request->all(), $this->rules);
+        $customer = Customer::query()->create($request->customerAttributes());
 
-        if ($validator->fails()) {
-            return redirect()->route('customer.add')->withInput()->withErrors($validator);
-        }
-
-        $data = $validator->validated();
-
-        Customer::create(array_merge($validator->validated(), [
-            'dob' => !empty(Arr::get($data, 'dob')) ? Carbon::parse(Arr::get($data, 'dob')) : null
-        ]));
-
-        return redirect()->route('customer.index')->with('success', 'Thêm khách hàng "' . $request->fullname . '" thành công!');
+        return to_route('customers.index')
+            ->with('success', "Thêm khách hàng \"{$customer->fullname}\" thành công!");
     }
 
-    public function customerProfile($id)
+    public function show(Customer $customer): View
     {
-        $customer = Customer::firstWhere('id', $id);
-
-        return $customer
-            ? view('customers.profile', compact('customer'))
-            : redirect()->route('customer.index')->withErrors([
-                "Không tìm thấy hồ sơ khách hàng :("
-            ]);
+        return view('customers.show', compact('customer'));
     }
 
-    public function delete($id)
-    {
-        $customer = Customer::firstWhere('id', $id);
-
-        if (!$customer) {
-            return redirect()->route('customer.index')->withErrors([
-                "Không tìm thấy hồ sơ khách hàng :("
-            ]);
-        } else {
-            $customer->delete();
-            return redirect()->route('customer.index')->with('success', 'Xóa hồ sơ khách hàng thành công!');
-        }
-    }
-
-    public function edit(Customer $customer)
+    public function edit(Customer $customer): View
     {
         return view('customers.edit', compact('customer'));
     }
 
-    public function save(Request $request, Customer $customer)
+    public function update(CustomerRequest $request, Customer $customer): RedirectResponse
     {
-        $validator = Validator::make($request->all(), $this->rules);
+        $customer->update($request->customerAttributes());
 
-        if ($validator->fails()) {
-            return back()->withInput()->withErrors($validator);
-        }
-
-        $data = $validator->validated();
-
-        $customer->update(array_merge($validator->validated(), [
-            'dob' => !empty(Arr::get($data, 'dob')) ? Carbon::parse(Arr::get($data, 'dob')) : null
-        ]));
-
-        return redirect()->route('customer.index')->with('success', 'Lưu thông tin khách hàng "' . $request->fullname . '" thành công!');
+        return to_route('customers.index')
+            ->with('success', "Lưu thông tin khách hàng \"{$customer->fullname}\" thành công!");
     }
 
+    public function destroy(Customer $customer): RedirectResponse
+    {
+        $customer->delete();
+
+        return to_route('customers.index')->with('success', 'Xóa hồ sơ khách hàng thành công!');
+    }
+
+    public function export(): BinaryFileResponse
+    {
+        return Excel::download(new CustomersExport, 'customers-'.now()->format('Ymd-His').'.xlsx');
+    }
 }

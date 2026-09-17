@@ -1,6 +1,9 @@
 <?php
 
+use App\Providers\AppServiceProvider;
 use Illuminate\Support\Facades\Facade;
+use Illuminate\Support\ServiceProvider;
+use Maatwebsite\Excel\Facades\Excel;
 
 return [
 
@@ -43,9 +46,32 @@ return [
 
     'debug' => (bool) env('APP_DEBUG', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Server License Settings
+    |--------------------------------------------------------------------------
+    |
+    | "demo" blocks every write request in the admin panel. "api_rate_limit"
+    | is the number of public API calls allowed per minute per IP address;
+    | keep it generous because many clients may share one NAT address.
+    |
+    */
+
     'demo' => (bool) env('APP_DEMO', false),
 
+    'force_https' => (bool) env('FORCE_HTTPS', false),
+
     'pagination' => (int) env('PAGINATION', 10),
+
+    'api_rate_limit' => (int) env('API_RATE_LIMIT', 300),
+
+    'version_upload' => [
+        'max_kb' => (int) env('VERSION_UPLOAD_MAX_KB', 512_000),
+        'extensions' => explode(',', (string) env(
+            'VERSION_UPLOAD_EXTENSIONS',
+            'zip,rar,7z,tar,gz,exe,msi,dmg,pkg,apk,jar,bin'
+        )),
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -158,8 +184,8 @@ return [
     |
     */
 
-    'providers' => Illuminate\Support\ServiceProvider::defaultProviders()->merge([
-        App\Providers\AppServiceProvider::class,
+    'providers' => ServiceProvider::defaultProviders()->merge([
+        AppServiceProvider::class,
     ])->toArray(),
 
     /*
@@ -175,7 +201,7 @@ return [
 
     'aliases' => Facade::defaultAliases()->merge([
         // 'ExampleClass' => App\Example\ExampleClass::class,
-        'Excel' => Maatwebsite\Excel\Facades\Excel::class,
+        'Excel' => Excel::class,
     ])->toArray(),
 
 ];

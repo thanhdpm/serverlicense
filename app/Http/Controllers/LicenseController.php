@@ -2,110 +2,69 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreLicenseRequest;
+use App\Http\Requests\UpdateLicenseRequest;
 use App\Models\Customer;
 use App\Models\License;
 use App\Models\Product;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\View\View;
 
 class LicenseController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View
     {
-        $params = $request->all();
-        $licenses = License::query()->orderByDesc('id');
-
-        search_by_cols($licenses, $request->input('s'), [
-            'customer', 'product', 'key', 'duration', 'fingerprint', 'activated_at', 'created_at',
-        ]);
-
-        $licenses = paginate_with_params($licenses, $params);
+        $licenses = License::query()
+            ->search($request->string('s')->toString())
+            ->latest('id')
+            ->paginate($this->perPage($request))
+            ->withQueryString();
 
         return view('licenses.index', compact('licenses'));
     }
 
-    public function viewAdd()
+    public function create(): View
     {
-        return view('licenses.add');
+        return view('licenses.create', [
+            'products' => Product::query()->orderBy('name')->get(['id', 'name']),
+            'customers' => Customer::query()->latest('id')->get(['id', 'fullname']),
+        ]);
     }
 
-    public function doAdd(Request $request)
+    public function store(StoreLicenseRequest $request): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
-            'product' => 'required|numeric',
-            'customer' => 'required|numeric',
-            'key' => 'required',
-            'duration_value' => 'required|numeric',
-            'duration_period' => 'required|in:seconds,minutes,hours,days,weeks,months,years'
+        $customer = Customer::query()->findOrFail($request->integer('customer'));
+        $product = Product::query()->findOrFail($request->integer('product'));
+
+        License::query()->create([
+            'customer_id' => $customer->id,
+            'customer' => $customer->toArray(),
+            'product_id' => $product->id,
+            'product' => $product->toArray(),
+            'key' => $request->validated('key'),
+            'duration' => $request->durationInSeconds(),
         ]);
 
-        if ($validator->fails()) {
-            return redirect()->route('license.add')->withInput()->withErrors($validator);
-        }
-
-        $product = Product::where('id', $request->product)->first();
-        $customer = Customer::where('id', $request->customer)->first();
-
-        if (License::where('key', $request->key)->where('activated_at', null)->exists()) {
-            return redirect()->route('license.add')->withInput()->withErrors([
-                'Mã kích hoạt đã tồn tại.'
-            ]);
-        }
-
-        License::create([
-            'customer' => $customer,
-            'product' => $product,
-            'product_id' => $product['id'],
-            'key' => $request->key,
-            'duration' => $this->convertDuration($request->duration_value, $request->duration_period)
-        ]);
-
-        return redirect()->route('license.index')->with('success', 'Thêm giấy phép thành công!');
+        return to_route('licenses.index')->with('success', 'Thêm giấy phép thành công!');
     }
 
-    public function convertDuration($value, $period)
+    public function edit(License $license): View
     {
-        $arr = array(
-            'seconds' => $value,
-            'minutes' => $value * 60,
-            'hours' => $value * 3600,
-            'days' => $value * 86400,
-            'weeks' => $value * 604800,
-            'months' => $value * 2630000,
-            'years' => $value * 31557600,
-        );
-
-        return $arr[$period];
-    }
-
-    public function edit($id)
-    {
-        $license = License::where('id', $id)->firstOrFail();
-
         return view('licenses.edit', compact('license'));
     }
 
-    public function delete($id)
+    public function update(UpdateLicenseRequest $request, License $license): RedirectResponse
     {
-        License::where('id', $id)->delete();
-        return redirect()->route('license.index')->with('success', 'Xóa giấy phép thành công!');
+        $license->update(['duration' => $request->durationInSeconds()]);
+
+        return to_route('licenses.edit', $license)->with('success', 'Đã lưu thay đổi thông tin giấy phép!');
     }
 
-    public function save(Request $request, $id)
+    public function destroy(License $license): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
-            'duration_value' => 'required|numeric',
-            'duration_period' => 'required|in:seconds,minutes,hours,days,weeks,months,years'
-        ]);
+        $license->delete();
 
-        if ($validator->fails()) {
-            return redirect()->route('license.edit', [$id])->withInput()->withErrors($validator);
-        }
-
-        License::where('id', $id)->update([
-            'duration' => $this->convertDuration($request->duration_value, $request->duration_period)
-        ]);
-
-        return redirect()->route('license.edit', [$id])->with('success', 'Đã lưu thay đổi thông tin giấy phép!');
+        return to_route('licenses.index')->with('success', 'Xóa giấy phép thành công!');
     }
 }

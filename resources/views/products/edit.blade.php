@@ -10,20 +10,21 @@
 </div>
 
 <div class="row">
-    <div class="col-lg-6" style="display: block; margin: 0 auto;">
+    <div class="col-lg-6 mx-auto">
         <div class="card">
             <div class="card-body">
-                <form action="{{ route('product.save', [ $product['id'] ]) }}" method="POST">
+                <form action="{{ route('products.update', $product) }}" method="POST">
                     @csrf
+                    @method('PUT')
 
                     <div class="form-group mb-3">
-                        <label for="">Tên sản phẩm</label>
-                        <input type="text" class="form-control" name="name" value="{{ $product['name'] }}">
+                        <label for="name">Tên sản phẩm</label>
+                        <input type="text" id="name" class="form-control" name="name" value="{{ old('name', $product->name) }}" required>
                     </div>
-                    
+
                     <div class="form-group mb-3">
-                        <label for="">Mô tả</label>
-                        <textarea name="description" class="form-control" cols="30" rows="3">{{ $product['description'] }}</textarea>
+                        <label for="description">Mô tả</label>
+                        <textarea id="description" name="description" class="form-control" rows="3">{{ old('description', $product->description) }}</textarea>
                     </div>
 
                     <div class="form-group mb-3">
@@ -32,7 +33,6 @@
                         </button>
                     </div>
                 </form>
-                    
             </div>
         </div>
     </div>

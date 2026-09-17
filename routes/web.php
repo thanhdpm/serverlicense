@@ -1,123 +1,35 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LicenseController;
-use App\Http\Controllers\SetupController;
+use App\Http\Controllers\PasswordController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\VersionController;
+use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
-*/
+Route::middleware('guest')->group(function () {
+    Route::get('login', [AuthController::class, 'create'])->name('login');
+    Route::post('login', [AuthController::class, 'store'])->name('login.store');
+});
 
-Route::post('/save-setup', [SetupController::class, 'saveSetup'])->name('save_setup');
+Route::middleware('auth')->group(function () {
+    Route::post('logout', [AuthController::class, 'destroy'])->name('logout');
 
-Route::middleware(['app'])->group(function () {
-    Route::middleware(['guest'])->group(function () {
-        Route::get('/login', [AuthController::class, 'viewLogin'])->name('auth.login');
-        Route::post('/login', [AuthController::class, 'doLogin'])->name('auth.doLogin');
-    });
+    Route::view('/', 'dashboard')->name('dashboard');
 
-    Route::middleware(['auth'])->group(function () {
+    // Every non-GET request below is rejected while APP_DEMO is enabled.
+    Route::middleware('demo')->group(function () {
+        Route::get('change-password', [PasswordController::class, 'edit'])->name('password.edit');
+        Route::put('change-password', [PasswordController::class, 'update'])->name('password.update');
 
-        Route::group([
-            'as' => 'auth.',
-            'controller' => AuthController::class,
-        ], function () {
-            Route::get('/logout', 'doLogout')->name('logout');
-            Route::get('/change-password', 'viewChangePwd')->name('change_pwd');
-            Route::post('/change-password', 'doChangePwd')
-                ->middleware('protect')
-                ->name('do_change_pwd');
-        });
+        Route::get('customers/export', [CustomerController::class, 'export'])->name('customers.export');
+        Route::resource('customers', CustomerController::class)
+            ->missing(fn () => to_route('customers.index')->withErrors('Không tìm thấy hồ sơ khách hàng :('));
 
-        Route::get('/', [DashboardController::class, 'index'])->name('dashboard.index');
+        Route::resource('products', ProductController::class)->except(['create', 'show']);
+        Route::resource('products.versions', VersionController::class)->shallow()->except(['create', 'show']);
 
-        Route::group([
-            'as' => 'customer.',
-            'controller' => CustomerController::class
-        ], function () {
-
-            Route::group(['prefix' => 'customers',], function () {
-                Route::get('/', 'index')->name('index');
-                Route::get('add', 'viewAdd')->name('add');
-                Route::post('add', 'doAdd')
-                    ->middleware('protect')
-                    ->name('do_add');
-            });
-
-            Route::group(['prefix' => 'customer'], function () {
-                Route::get('{id}', 'customerProfile')->name('profile');
-                Route::get('{id}/delete', 'delete')
-                    ->middleware('protect')
-                    ->name('delete');
-                Route::get('{customer}/edit', 'edit')->name('edit');
-                Route::post('{customer}/save', 'save')
-                    ->middleware('protect')
-                    ->name('save');
-            });
-
-        });
-
-        Route::group([
-            'as' => 'product.',
-            'controller' => ProductController::class
-        ], function () {
-
-            Route::group(['prefix' => 'products'], function () {
-                Route::get('/', 'index')->name('index');
-                Route::post('/', 'addProduct')
-                    ->middleware('protect')
-                    ->name('add');
-            });
-
-            Route::group([
-                'prefix' => 'product'
-            ], function () {
-                Route::get('{product}', 'edit')->name('edit');
-                Route::get('{product}/delete', 'delete')
-                    ->middleware('protect')
-                    ->name('delete');
-                Route::post('{product}/save', 'save')
-                    ->middleware('protect')
-                    ->name('save');
-                Route::get('version-log/{id}', 'version_log')->name('version_log');
-                Route::post('version-log/{id}', 'addVersion')
-                    ->middleware('protect')
-                    ->name('version.add');
-                Route::get('version-log/{id}/edit', 'editVersion')->name('version.edit');
-                Route::get('version-log/{id}/delete', 'deleteVersion')
-                    ->middleware('protect')
-                    ->name('version.delete');
-                Route::get('version-log/{id}/save', 'saveVersion')
-                    ->middleware('protect')
-                    ->name('version.save');
-            });
-        });
-
-        Route::group([
-            'prefix' => 'licenses',
-            'as' => 'license.',
-            'controller' => LicenseController::class
-        ], function () {
-
-            Route::get('/', 'index')->name('index');
-            Route::get('add', 'viewAdd')->name('add');
-            Route::post('add', 'doAdd')->name('do_add');
-            Route::get('{id}/edit', 'edit')->name('edit');
-            Route::post('{id}/save', 'save')->name('save');
-            Route::get('{id}/delete', 'delete')->name('delete');
-
-        });
-
+        Route::resource('licenses', LicenseController::class)->except('show');
     });
 });

@@ -2,172 +2,69 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
 use App\Models\Version;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 
 class ProductController extends Controller
 {
-    //
-
-    public function index(Request $request)
+    public function index(Request $request): View
     {
-        $params = $request->all();
-        $products = Product::query()->orderByDesc('id');
-
-        search_by_cols($products, $request->input('s'), [
-            'name', 'description', 'id'
-        ]);
-
-        $products = paginate_with_params($products, $params);
+        $products = Product::query()
+            ->with('latestVersion')
+            ->search($request->string('s')->toString())
+            ->latest('id')
+            ->paginate($this->perPage($request))
+            ->withQueryString();
 
         return view('products.index', compact('products'));
     }
 
-    public function addProduct(Request $request)
+    public function store(StoreProductRequest $request): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required',
-            'version' => 'required'
-        ]);
+        $file = $request->versionFile();
+        $fileUrl = $file ? Version::storeUpload($file) : null;
 
-        if ($validator->fails()) {
-            return redirect()->route('product.index')->withInput()->withErrors($validator);
-        }
+        $product = DB::transaction(function () use ($request, $fileUrl) {
+            $product = Product::query()->create($request->safe()->only(['name', 'description']));
 
-        $filename = $this->uploadFile($request->file('file'), $request);
+            $product->versions()->create([
+                'version' => $request->validated('version'),
+                'description' => $request->validated('version_description'),
+                'file_url' => $fileUrl,
+            ]);
 
-        $product = new Product;
-        $product->name = $request->name;
-        $product->description = (!$request->description) ? null : $request->description;
-        $product->save();
+            return $product;
+        });
 
-        $product_id = $product->id;
-
-        Version::insert([
-            'product_id' => $product_id,
-            'version' => $request->version,
-            'description' => (!$request->version_description) ? null : $request->version_description,
-            'file_url' => (!$filename) ? null : '/storage/' . $filename
-        ]);
-
-        return redirect()->route('product.index')->with('success', 'Thêm sản phẩm "' . $request->name . '" thành công!');
+        return to_route('products.index')->with('success', "Thêm sản phẩm \"{$product->name}\" thành công!");
     }
 
-    public function delete($id)
+    public function edit(Product $product): View
     {
-        Product::where('id', $id)->delete();
-        Version::where('product_id', $id)->delete();
-
-        return redirect()->route('product.index')->with('success', 'Xóa sản phẩm thành công!');
-    }
-
-    public function edit($id)
-    {
-        $product = Product::where('id', $id)->firstOrFail();
-
         return view('products.edit', compact('product'));
     }
 
-    public function save(Request $request, Product $product)
+    public function update(UpdateProductRequest $request, Product $product): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required'
-        ]);
+        $product->update($request->validated());
 
-        if ($validator->fails()) {
-            return back()->withInput()->withErrors($validator);
-        }
-
-        $product->update([
-            'name' => $request->name,
-            'description' => (!$request->description) ? null : $request->description,
-        ]);
-
-        return back()->with('success', 'Đã lưu thay đổi thông tin sản phẩm!');
+        return to_route('products.edit', $product)->with('success', 'Đã lưu thay đổi thông tin sản phẩm!');
     }
 
-    public function version_log($id)
+    public function destroy(Product $product): RedirectResponse
     {
-        $product = Product::where('id', $id)->firstOrFail();
-        $version_logs = Version::where('product_id', $id)->orderBy('id', 'desc')->paginate(5);
+        DB::transaction(function () use ($product) {
+            // Delete through Eloquent so each version also removes its file.
+            $product->versions()->lazyById()->each(fn (Version $version) => $version->delete());
+            $product->delete();
+        });
 
-        return view('products.version_log', compact('version_logs', 'product'));
-    }
-
-    public function addVersion(Request $request, $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'version' => 'required'
-        ]);
-
-        if ($validator->fails()) {
-            return back()->withInput()->withErrors($validator);
-        }
-
-        $filename = $this->uploadFile($request->file('file'), $request);
-
-        Version::insert([
-            'product_id' => $id,
-            'version' => $request->version,
-            'description' => (!$request->description) ? null : $request->description,
-            'file_url' => (!$filename) ? null : '/storage/' . $filename
-        ]);
-
-        return back()->with('success', 'Thêm phiên bản mới "' . $request->version . '" thành công!');
-    }
-
-    public function editVersion($id)
-    {
-        $version = Version::where('id', $id)->firstOrFail();
-
-        return view('products.version_edit', compact('version'));
-    }
-
-    public function deleteVersion($id)
-    {
-        Version::where('id', $id)->delete();
-        return back()->with('success', 'Xóa phiên bản thành công!');
-    }
-
-    public function saveVersion(Request $request, $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'version' => 'required'
-        ]);
-
-        if ($validator->fails()) {
-            return back()->withInput()->withErrors($validator);
-        }
-
-        $filename = $this->uploadFile($request->file('file'), $request);
-
-        if (!$filename) {
-            Version::where('id', $id)->update([
-                'version' => $request->version,
-                'description' => (!$request->description) ? null : $request->description
-            ]);
-        } else {
-            Version::where('id', $id)->update([
-                'version' => $request->version,
-                'description' => (!$request->description) ? null : $request->description,
-                'file_url' => '/storage/' . $filename
-            ]);
-        }
-
-        return back()->with('success', 'Đã lưu thay đổi thông tin phiên bản!');
-    }
-
-    private function uploadFile(?UploadedFile $file, Request $request): ?string
-    {
-        if (!$file) return null;
-
-        $path = 'public';
-        $filename = md5(time()) . "_" . date('d_m_Y') . "_" . time() . "." . $file->extension();
-        $request->file('file')->storeAs($path, $filename, 'local');
-
-        return $filename;
+        return to_route('products.index')->with('success', 'Xóa sản phẩm thành công!');
     }
 }
