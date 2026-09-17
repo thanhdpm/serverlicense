@@ -1,11 +1,11 @@
+# Server License - Software License & Customer Management
 
-# Server License - Quản lý giấy phép phần mềm, khách hàng
+A self-hosted admin panel for managing software licenses, customers, products and release versions, with a simple API that client software uses to validate licenses and check for updates. License durations can be set flexibly, from seconds to years.
 
-Có đầy đủ tài liệu API tích hợp, quản lý giấy phép, khách hàng linh hoạt. Có cấu hình thời hạn giấy phép theo thời gian.
-- [VIDEO DEMO / HƯỚNG DẪN SỬ DỤNG](https://www.youtube.com/watch?v=Q7xXVTATZ6A)
+- [Video demo / user guide](https://www.youtube.com/watch?v=Q7xXVTATZ6A)
 
 ```
-🚫 Cấm thương mại mã nguồn miễn phí dưới mọi hình thức!
+🚫 Commercial use of this free source code, in any form, is prohibited.
 ```
 
    - [Requirements](#requirements)
@@ -13,10 +13,9 @@ Có đầy đủ tài liệu API tích hợp, quản lý giấy phép, khách h�
    - [Upgrading an existing installation](#upgrading-an-existing-installation)
    - [Production deployment](#production-deployment)
    - [Development](#development)
-   - [Api Documentation](#api-documentation)
+   - [API Documentation](#api-documentation)
    - [FAQ](#faq)
-   - [Bug report & Contribute](#bug-report--contribute)
-   - [Credits](#credits)
+   - [Contributing](#contributing)
 
 ## Requirements
 
@@ -35,7 +34,7 @@ bin/artisan migrate
 ## Installation
 
 ```sh
-git clone https://github.com/ducthanh-jtech/serverlicense.git
+git clone https://github.com/thanhdpm/serverlicense.git
 cd serverlicense
 composer install
 cp .env.example .env
@@ -52,10 +51,10 @@ php artisan serve
 
 Open [Server License](http://127.0.0.1:8000/) and log in with:
 
--  **Email Address:** admin@jzontech.asia
+-  **Email address:** admin@jzontech.asia
 -  **Password:** admin
 
-**Change this password immediately** (avatar menu → *Đổi mật khẩu*).
+**Change this password immediately** (avatar menu → *Change password*).
 
 ### Configuration
 
@@ -114,11 +113,11 @@ The same checks run in GitHub Actions (`.github/workflows/ci.yml`). The public A
 
 All endpoints return HTTP 200 with an `ok` flag; check `message` for the outcome.
 
-- **Kiểm tra, thông tin giấy phép:**
+- **Check a license and get its details:**
   - **GET** {{base_url}}/api/license?key=*{{license_key}}*
   - `message`: `VALID_LICENSE`, `INVALID_LICENSE`, `EXPIRED_LICENSE`, `VALIDATION_FAILED`
-  - Lần gọi hợp lệ đầu tiên sẽ kích hoạt giấy phép (lưu IP + User-Agent).
-- **Thông tin sản phẩm (bao gồm version log):**
+  - The first valid call activates the license and records the caller's IP address and User-Agent.
+- **Get product details (including the version log):**
   - **GET** {{base_url}}/api/product?id=*{{product_id}}*
   - `message`: `SUCCESS`, `PRODUCT_NOT_FOUND`, `VALIDATION_FAILED`
 
@@ -126,24 +125,25 @@ Requests are limited to `API_RATE_LIMIT` per minute per IP (HTTP 429 when exceed
 
 ## FAQ
 
-**1. Làm sao để phần mềm của tôi biết phiên bản hiện tại là gì?**
-- Request api `Thông tin sản phẩm`, nó sẽ trả về kết quả bao gồm cả nhật kí phiên bản. Phiên bản mới nhất sẽ được đẩy lên đầu tiên, ngoài ra còn có key (`lastest_version`) riêng để nhận biết phiên bản mới nhất.
+**1. How does my software know which version is the latest?**
+- Call the product details API. The response includes the full version log, newest version first, plus a dedicated `lastest_version` key holding the latest version.
 
-**2. Làm sao để cập nhật phần mềm theo phiên bản?**
-- Request api `Thông tin sản phẩm`, `versions` sẽ hiển thị tất cả phiên bản và đường dẫn tải bản cập nhật.
+**2. How do I update my software to a specific version?**
+- Call the product details API. `versions` lists every version together with the download link for its update file.
 
-## Bug report & Contribute
+## Contributing
 
-- Facebook *(Online 24/24)*: **https://www.facebook.com/jzondev**
+Contributions are welcome!
 
-- Telegram *(Online 24/24)*: **https://t.me/cuteboiz999**
+- **Found a bug or have an idea?** [Open an issue](https://github.com/thanhdpm/serverlicense/issues). Include steps to reproduce, what you expected, and what happened instead.
+- **Want to fix or improve something?** Fork the repository, create a branch, and [open a pull request](https://github.com/thanhdpm/serverlicense/pulls).
 
-- Zalo: **0966142061**  *(Không khuyến khích)*
+Before opening a pull request, make sure these pass:
 
-## Credits
+```sh
+composer lint
+composer analyse
+composer test
+```
 
--  *Fully coded by **Jzon Dev / Pham Duc Thanh.***
-
--  *Product of Jzon Tech.*
-
-**CẢM ƠN BẠN ĐÃ SỬ DỤNG SẢN PHẨM CỦA JZON TECH 😍**
+Please keep the public API responses backward compatible: client software already in use depends on them.
