@@ -15,22 +15,22 @@
 
                 @include('common.alert')
 
-                <form class="form-horizontal" action="{{ route('auth.doLogin') }}" method="POST">
+                <form class="form-horizontal" action="{{ route('login.store') }}" method="POST">
                     @csrf
 
                     <div class="mb-3">
                         <label for="email" class="form-label">Địa chỉ email</label>
-                        <input type="text" class="form-control" id="email" placeholder="example@jzontech.asia" name="email" value="{{ old('email') }}" />
+                        <input type="email" class="form-control" id="email" placeholder="example@jzontech.asia" name="email" value="{{ old('email') }}" autocomplete="username" required autofocus />
                     </div>
 
                     <div class="mb-3">
-                        <label for="userpassword">Mật khẩu</label>
-                        <input type="password" class="form-control" id="userpassword" placeholder="**********" name="password" />
+                        <label for="password">Mật khẩu</label>
+                        <input type="password" class="form-control" id="password" placeholder="**********" name="password" autocomplete="current-password" required />
                     </div>
 
                     <div class="form-check mt-3">
-                        <input type="checkbox" class="form-check-input" id="auth-remember-check" name="remember" value="1" />
-                        <label class="form-check-label" for="auth-remember-check">Ghi nhớ phiên</label>
+                        <input type="checkbox" class="form-check-input" id="remember" name="remember" value="1" @checked(old('remember')) />
+                        <label class="form-check-label" for="remember">Ghi nhớ phiên</label>
                     </div>
 
                     <div class="mt-3">
@@ -43,13 +43,8 @@
 
     <div class="mt-5 text-center">
         <p>
-            ©
-            <script>
-                document.write(new Date().getFullYear());
-            </script>
-            Server License. Powered by <i class="mdi mdi-heart text-danger"></i> <a href="https://jzontech.asia" target="_blank">Jzon Tech</a>
+            © {{ now()->year }} Server License. Powered by <i class="mdi mdi-heart text-danger"></i> <a href="https://jzontech.asia" target="_blank" rel="noopener">Jzon Tech</a>
         </p>
     </div>
 </div>
 @endsection
-

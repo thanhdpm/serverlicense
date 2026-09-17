@@ -2,12 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Foundation\Bus\DispatchesJobs;
-use Illuminate\Foundation\Validation\ValidatesRequests;
-use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Http\Request;
 
-class Controller extends BaseController
+abstract class Controller
 {
-    use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
+    private const MAX_PER_PAGE = 100;
+
+    /**
+     * Page size requested through ?row= or ?perPage=, capped so a single
+     * request can't pull an unbounded number of rows.
+     */
+    protected function perPage(Request $request): int
+    {
+        $perPage = $request->integer('row')
+            ?: $request->integer('perPage')
+            ?: (int) config('app.pagination')
+            ?: 10;
+
+        return min(max($perPage, 1), self::MAX_PER_PAGE);
+    }
 }

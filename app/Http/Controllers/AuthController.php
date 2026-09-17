@@ -2,81 +2,36 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Http\Requests\LoginRequest;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    //
-
-    public function viewLogin()
+    public function create(): View
     {
         return view('auth.login');
     }
 
-    public function doLogin(Request $request)
+    public function store(LoginRequest $request): RedirectResponse
     {
+        $request->authenticate();
+        $request->session()->regenerate();
 
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required|min:5'
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->route('auth.login')->withInput()->withErrors($validator);
-        }
-
-        $credentials = $request->only('email', 'password');
-        $auth = Auth::attempt($credentials, $request->has('remember'));
-
-        return $auth
-            ? redirect()->route('dashboard.index')->with('success', 'Đăng nhập thành công! Chào mừng quay trở lại ^^')
-            : redirect()->route('auth.login')->withInput()->withErrors([
-                "Email hoặc mật khẩu không đúng."
-            ]);
+        return redirect()
+            ->intended(route('dashboard'))
+            ->with('success', 'Đăng nhập thành công! Chào mừng quay trở lại ^^');
     }
 
-    public function doLogout()
+    public function destroy(Request $request): RedirectResponse
     {
-        Session::flush();
-        Auth::logout();
-        return redirect()->route('auth.login');
+        Auth::guard('web')->logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return to_route('login');
     }
-
-    public function viewChangePwd()
-    {
-        return view('auth.change-password');
-    }
-
-    public function doChangePwd(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'old' => 'required',
-            'new' => 'required|min:8',
-            'confirm' => 'required|same:new',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->route('auth.change_pwd')->withInput()->withErrors($validator);
-        }
-
-        $user = auth()->user();
-
-        if (!Hash::check($request->old, $user->password)) {
-            return redirect()->route('auth.change_pwd')->withInput()->withErrors([
-                'Mật khẩu cũ không hợp lệ!'
-            ]);
-        }
-
-        $user->update([
-            'password' => Hash::make($request->new)
-        ]);
-
-        return redirect()->route('auth.change_pwd')->with('success', 'Đổi mật khẩu thành công!');
-    }
-
 }

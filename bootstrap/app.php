@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\BlockWritesInDemoMode;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -11,17 +12,18 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware) {
+    ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'app' => \App\Http\Middleware\App::class,
-            'protect' => \App\Http\Middleware\ProtectRoute::class,
+            'demo' => BlockWritesInDemoMode::class,
         ]);
 
         $middleware->redirectTo(
-            guests: '/login',
+            guests: fn () => route('login'),
+            users: fn () => route('dashboard'),
         );
+
+        $middleware->throttleApi();
     })
-    ->withExceptions(function (Exceptions $exceptions) {
+    ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
-
